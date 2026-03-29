@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}GEO-SEO Auditor — AI Search Optimization{% endblock %}
+
+{% block head %}
+<style>
+  .hero {
+    text-align: center;
+    padding: 3rem 0 2.5rem;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  }
+
+  .hero-eyebrow::before,
+  .hero-eyebrow::after {
+    content: '';
+    width: 40px; height: 1px;
+    background: var(--mint-dim);
+  }
+
+  h1 {
+    font-family: var(--font-head);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 1.2rem;
+  }
+
+  h1 .accent {
+    background: linear-gradient(135deg, var(--mint) 0%, #00c8e0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    max-width: 520px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+  }
+
+  /* ── Audit Form ── */
+  .audit-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 2rem;
+    max-width: 680px;
+    margin: 0 auto 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .audit-form::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--mint), var(--blue), transparent);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 1rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .url-input {
+    font-size: 0.95rem !important;
+    padding: 0.85rem 1.1rem !important;
+  }
+
+  .btn-audit {
+    padding: 0.85rem 1.8rem !important;
+    font-size: 0.95rem !important;
+    white-space: nowrap;
+  }
+
+  .form-hint {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.75rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+
+  .toggle-advanced {
+    font-family: var(--font-mono);
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: right;
+    display: block;
+    margin-bottom: 0.75rem;
+    user-select: none;
+  }
+  .toggle-advanced:hover { color: var(--mint); }
+
+  .advanced-fields { display: none; }
+  .advanced-fields.open { display: block; }
+
+  .error-box {
+    background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.3);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #ff8099;
+    margin-bottom: 1rem;
+  }
+
+  /* ── Stats strip ── */
+  .stats-strip {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 4rem;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+
+  .stat-num span { color: var(--mint); }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* ── Features ── */
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    font-weight: 600;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 4rem;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--border-accent);
+    background: var(--surface-hover);
+  }
+
+  .feature-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.6rem;
+    display: block;
+  }
+
+  .feature-name {
+    font-family: var(--font-head);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .feature-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── Recent audits ── */
+  .recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-bottom: 0.5rem;
+  }
+
+  .recent-item:hover {
+    border-color: var(--border-accent);
+    background: var(--surface-hover);
+  }
+
+  .recent-url {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .recent-meta {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-left: 1rem;
+    white-space: nowrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-eyebrow">GEO-First AI Search Optimization</div>
+  <h1>Audite sua visibilidade<br>nos <span class="accent">motores de IA</span></h1>
+  <p class="hero-sub">
+    Analise como ChatGPT, Perplexity, Gemini e Google AI Overview
+    enxergam o seu site. Scores detalhados + plano de ação em segundos.
+  </p>
+</div>
+
+<!-- ── Audit Form ── -->
+<div class="audit-form">
+  {% if error %}
+  <div class="error-box">⚠ {{ error }}</div>
+  {% endif %}
+
+  <form action="/audit" method="POST">
+    <div class="form-row">
+      <div>
+        <label>URL do site</label>
+        <input
+          class="url-input"
+          type="url"
+          name="url"
+          placeholder="https://seusite.com.br"
+          required
+          autofocus
+        />
+      </div>
+      <button type="submit" class="btn btn-primary btn-audit">
+        ▶ Auditar
+      </button>
+    </div>
+
+    <span class="toggle-advanced" onclick="toggleAdvanced()">
+      ⚙ Configurações avançadas ▾
+    </span>
+
+    <div class="advanced-fields" id="advancedFields">
+      <div class="form-grid">
+        <div>
+          <label>Provedor de IA</label>
+          <select name="provider" id="providerSelect" onchange="updateKeyLabel()">
+            <option value="gemini">Gemini (Google) — Grátis</option>
+            <option value="perplexity">Perplexity AI</option>
+          </select>
+        </div>
+        <div>
+          <label id="keyLabel">Gemini API Key</label>
+          <input
+            type="password"
+            name="api_key"
+            id="apiKeyInput"
+            placeholder="{% if has_gemini_key %}● ● ●  salva no servidor{% else %}AIzaSy...{% endif %}"
+          />
+        </div>
+      </div>
+    </div>
+
+    <p class="form-hint">
+      🔒 A chave fica só nesta sessão e nunca é armazenada.
+      &nbsp;·&nbsp;
+      <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--mint); text-decoration: none;">
+        Obter chave Gemini grátis →
+      </a>
+    </p>
+  </form>
+</div>
+
+<!-- ── Stats ── -->
+<div class="stats-strip">
+  <div class="stat-item">
+    <div class="stat-num">6<span>×</span></div>
+    <div class="stat-label">categorias analisadas</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">~<span>30s</span></div>
+    <div class="stat-label">por auditoria</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num"><span>∞</span></div>
+    <div class="stat-label">auditorias no tier grátis</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">100<span>%</span></div>
+    <div class="stat-label">open source</div>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<p class="section-title">O que é analisado</p>
+<div class="features-grid">
+  <div class="feature-card">
+    <span class="feature-icon">🤖</span>
+    <div class="feature-name">AI Citability</div>
+    <div class="feature-desc">Score de citabilidade para ChatGPT, Gemini e Perplexity</div>
+  </div>
+  <div class="feature-card">
+    <span class="feature-icon">🏷️</span>
+    <div class="feature-name">Brand Authority</div>
+    <div class="feature-desc">Sinais de autoridade de marca nos dados de treino das IAs</div>
+  </div>
+  <div class="feature-card">
+    <span class="feature-icon">✍️</span>
+    <div class="feature-name">E-E-A-T</div>
+    <div class="feature-desc">Experiência, Expertise, Autoridade e Confiabilidade</div>
+  </div>
+  <div class="feature-card">
+    <span class="feature-icon">⚙️</span>
+    <div class="feature-name">Technical GEO</div>
+    <div class="feature-desc">robots.txt, llms.txt, crawlers de IA, sitemap</div>
+  </div>
+  <div class="feature-card">
+    <span class="feature-icon">🗂️</span>
+    <div class="feature-name">Schema Markup</div>
+    <div class="feature-desc">JSON-LD, structured data e rich results</div>
+  </div>
+  <div class="feature-card">
+    <span class="feature-icon">📡</span>
+    <div class="feature-name">Platform Optim.</div>
+    <div class="feature-desc">Google AIO, ChatGPT Browse, Perplexity Citations</div>
+  </div>
+</div>
+
+<!-- ── Recent audits ── -->
+{% if recent %}
+<p class="section-title">Auditorias recentes</p>
+{% for a in recent %}
+{% if a.status == 'done' and a.result %}
+<a href="/results/{{ a.id }}" class="recent-item">
+  <span class="recent-url">{{ a.url }}</span>
+  <span class="recent-meta">{{ a.started_at or '' }}</span>
+  {% set score = a.result.scores.overall %}
+  {% if score >= 75 %}
+  <span class="score-pill score-good ml-2">{{ score }}</span>
+  {% elif score >= 60 %}
+  <span class="score-pill score-fair ml-2">{{ score }}</span>
+  {% elif score >= 40 %}
+  <span class="score-pill score-poor ml-2">{{ score }}</span>
+  {% else %}
+  <span class="score-pill score-critical ml-2">{{ score }}</span>
+  {% endif %}
+</a>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleAdvanced() {
+    const el = document.getElementById('advancedFields');
+    el.classList.toggle('open');
+  }
+
+  function updateKeyLabel() {
+    const provider = document.getElementById('providerSelect').value;
+    const label = document.getElementById('keyLabel');
+    const input = document.getElementById('apiKeyInput');
+    if (provider === 'gemini') {
+      label.textContent = 'Gemini API Key';
+      input.placeholder = '{{ "● ● ●  salva no servidor" if has_gemini_key else "AIzaSy..." }}';
+    } else {
+      label.textContent = 'Perplexity API Key';
+      input.placeholder = '{{ "● ● ●  salva no servidor" if has_perplexity_key else "pplx-..." }}';
+    }
+  }
+</script>
+{% endblock %}

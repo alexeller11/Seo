@@ -1,0 +1,577 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoria GEO — {{ audit.url }}{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Loading State ── */
+  #loading-view {
+    text-align: center;
+    padding: 5rem 1rem;
+  }
+
+  .loader-ring {
+    width: 64px; height: 64px;
+    border: 3px solid var(--border);
+    border-top-color: var(--mint);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-url {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .loading-steps {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+  }
+
+  .step-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    opacity: 0;
+    animation: fadeStep 0.4s ease forwards;
+  }
+
+  @keyframes fadeStep { to { opacity: 1; color: var(--text-muted); } }
+
+  /* ── Error State ── */
+  #error-view {
+    text-align: center;
+    padding: 4rem 1rem;
+    display: none;
+  }
+
+  .error-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  /* ── Results ── */
+  #results-view { display: none; }
+
+  .results-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .site-meta { flex: 1; }
+
+  .site-domain {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--mint);
+    margin-bottom: 0.3rem;
+  }
+
+  .site-name {
+    font-family: var(--font-head);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+
+  .site-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* ── Score Ring ── */
+  .score-ring-wrap {
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .score-ring-svg { width: 120px; height: 120px; }
+
+  .score-big {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 2rem;
+    fill: var(--text);
+  }
+
+  .score-label-svg {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    fill: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .rating-text {
+    font-family: var(--font-head);
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 0.4rem;
+  }
+
+  /* ── Summary card ── */
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--mint);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  /* ── Score bars ── */
+  .scores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .score-bar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .score-bar-card:hover { border-color: rgba(255,255,255,0.13); }
+
+  .score-bar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+
+  .score-cat-name {
+    font-family: var(--font-head);
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .score-cat-weight {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+  }
+
+  .bar-track {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.6rem;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0;
+  }
+
+  .score-insight {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ── Issues ── */
+  .section-head {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 2rem 0 1rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+
+  .issues-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 2rem; }
+
+  .issue-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+  }
+
+  .issue-top {
+    display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;
+  }
+
+  .issue-title {
+    font-family: var(--font-head);
+    font-size: 0.87rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .issue-detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    line-height: 1.5;
+  }
+
+  .issue-fix {
+    font-size: 0.78rem;
+    color: var(--mint);
+    font-family: var(--font-mono);
+  }
+
+  .issue-fix::before { content: '→ '; }
+
+  /* ── Quick Wins ── */
+  .quick-wins-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .win-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem;
+    border-top: 2px solid var(--mint);
+  }
+
+  .win-action {
+    font-family: var(--font-head);
+    font-size: 0.87rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .win-impact {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+  }
+
+  .effort-badge {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: var(--mint-dim);
+    color: var(--mint);
+    border: 1px solid var(--border-accent);
+  }
+
+  /* ── Action Plan ── */
+  .plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .week-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem;
+  }
+
+  .week-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--mint);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+  }
+
+  .week-actions { list-style: none; }
+
+  .week-actions li {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+  }
+
+  .week-actions li:last-child { border-bottom: none; }
+  .week-actions li::before { content: '□ '; color: var(--text-dim); }
+
+  /* ── Meta strip ── */
+  .meta-strip {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .meta-item { display: flex; align-items: center; gap: 0.4rem; }
+  .meta-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: var(--mint); }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: var(--yellow); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Loading ── -->
+<div id="loading-view" {% if audit.status != 'running' %}style="display:none"{% endif %}>
+  <div class="loader-ring"></div>
+  <p class="loading-url">{{ audit.url }}</p>
+  <h2 style="font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">
+    Analisando o site...
+  </h2>
+  <p class="text-muted text-sm">Isso pode levar de 20 a 45 segundos</p>
+  <div class="loading-steps" id="steps">
+    <span class="step-badge" style="animation-delay: 0.5s">📡 Buscando página</span>
+    <span class="step-badge" style="animation-delay: 1.5s">🤖 Verificando robots.txt</span>
+    <span class="step-badge" style="animation-delay: 2.5s">📋 Extraindo schema</span>
+    <span class="step-badge" style="animation-delay: 4s">🧠 Analisando com IA</span>
+    <span class="step-badge" style="animation-delay: 6s">📊 Calculando scores</span>
+  </div>
+</div>
+
+<!-- ── Error ── -->
+<div id="error-view" {% if audit.status != 'error' %}style="display:none"{% endif %}>
+  <div class="error-icon">⚠️</div>
+  <h2 style="font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-bottom: 0.75rem;">
+    Erro na auditoria
+  </h2>
+  <p id="error-msg" class="text-muted" style="margin-bottom: 1.5rem;">
+    {{ audit.error or '' }}
+  </p>
+  <a href="/" class="btn btn-ghost">← Tentar novamente</a>
+</div>
+
+<!-- ── Results ── -->
+<div id="results-view" {% if audit.status == 'done' %}style="display:block"{% endif %}>
+  {% if audit.status == 'done' and audit.result %}
+  {% set r = audit.result %}
+  {% set s = r.scores %}
+
+  <!-- Header -->
+  <div class="results-header">
+    <div class="site-meta">
+      <div class="site-domain">{{ audit.url }}</div>
+      <div class="site-name">{{ r.site_name or audit.url }}</div>
+      <div class="site-tags">
+        <span class="tag">{{ r.business_type or 'Website' }}</span>
+        <span class="tag">Auditado em {{ audit.started_at }}</span>
+        <span class="tag">via {{ audit.provider | title }}</span>
+      </div>
+    </div>
+
+    <div class="score-ring-wrap">
+      {% set sc = s.overall %}
+      {% set color = '#00e5a0' if sc >= 75 else ('#ffd166' if sc >= 60 else ('#ff783c' if sc >= 40 else '#ff4d6d')) %}
+      {% set circ = 3.14159 * 2 * 44 %}
+      {% set dash = (sc / 100) * circ %}
+      <svg class="score-ring-svg" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="44" fill="none" stroke="var(--border)" stroke-width="8"/>
+        <circle
+          cx="60" cy="60" r="44"
+          fill="none"
+          stroke="{{ color }}"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-dasharray="{{ dash }} {{ circ - dash }}"
+          stroke-dashoffset="{{ circ * 0.25 }}"
+          style="transition: stroke-dasharray 1.2s ease"
+        />
+        <text x="60" y="56" class="score-big" text-anchor="middle" dominant-baseline="middle">{{ sc }}</text>
+        <text x="60" y="74" class="score-label-svg" text-anchor="middle">GEO SCORE</text>
+      </svg>
+      {% if sc >= 90 %}<div class="rating-text text-mint">Excellent</div>
+      {% elif sc >= 75 %}<div class="rating-text" style="color:#60c8ff">Good</div>
+      {% elif sc >= 60 %}<div class="rating-text" style="color:var(--yellow)">Fair</div>
+      {% elif sc >= 40 %}<div class="rating-text" style="color:#ff783c">Poor</div>
+      {% else %}<div class="rating-text" style="color:var(--red)">Critical</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- Meta strip -->
+  <div class="meta-strip">
+    {% set meta = r._meta %}
+    <div class="meta-item">
+      <span class="meta-dot {{ 'dot-green' if meta.llms_txt_found else 'dot-red' }}"></span>
+      llms.txt: {{ 'Encontrado' if meta.llms_txt_found else 'Ausente' }}
+    </div>
+    <div class="meta-item">
+      <span class="meta-dot {{ 'dot-green' if meta.has_sitemap else 'dot-yellow' }}"></span>
+      Sitemap: {{ 'Presente' if meta.has_sitemap else 'Não encontrado' }}
+    </div>
+    <div class="meta-item">
+      <span class="meta-dot dot-green"></span>
+      Provider: {{ audit.provider | title }}
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-card">{{ r.summary }}</div>
+
+  <!-- Score Bars -->
+  <div class="scores-grid">
+    {% set cats = [
+      ('citability', 'AI Citability', '25%', r.category_insights.citability),
+      ('brand_authority', 'Brand Authority', '20%', r.category_insights.brand_authority),
+      ('content_eeat', 'Content E-E-A-T', '20%', r.category_insights.content_eeat),
+      ('technical', 'Technical GEO', '15%', r.category_insights.technical),
+      ('schema', 'Schema Markup', '10%', r.category_insights.schema),
+      ('platform', 'Platform Optim.', '10%', r.category_insights.platform),
+    ] %}
+    {% for key, name, weight, insight in cats %}
+    {% set val = s[key] %}
+    {% set barcolor = '#00e5a0' if val >= 75 else ('#ffd166' if val >= 50 else '#ff4d6d') %}
+    <div class="score-bar-card">
+      <div class="score-bar-top">
+        <span class="score-cat-name">{{ name }}</span>
+        <span style="font-family: var(--font-mono); font-size: 0.85rem; color: {{ barcolor }}; font-weight: 600;">
+          {{ val }}
+        </span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ val }}%; background: {{ barcolor }};"
+             data-width="{{ val }}"></div>
+      </div>
+      <span class="score-cat-weight">peso {{ weight }}</span>
+      <p class="score-insight mt-1">{{ insight }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Issues -->
+  {% macro render_issues(issues, sev, label) %}
+  {% if issues %}
+  <div class="section-head">
+    <span class="sev sev-{{ sev }}">{{ sev | upper }}</span>
+    {{ label }}
+    <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim);">({{ issues|length }})</span>
+  </div>
+  <div class="issues-list">
+    {% for i in issues %}
+    <div class="issue-card">
+      <div class="issue-top">
+        <span class="sev sev-{{ sev }}">{{ sev }}</span>
+        <span class="issue-title">{{ i.issue }}</span>
+      </div>
+      <p class="issue-detail">{{ i.detail }}</p>
+      <p class="issue-fix">{{ i.fix }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endmacro %}
+
+  {{ render_issues(r.issues.critical, 'critical', 'Corrija Imediatamente') }}
+  {{ render_issues(r.issues.high, 'high', 'Alta Prioridade') }}
+  {{ render_issues(r.issues.medium, 'medium', 'Média Prioridade') }}
+  {{ render_issues(r.issues.low, 'low', 'Baixa Prioridade') }}
+
+  <!-- Quick Wins -->
+  {% if r.quick_wins %}
+  <div class="section-head">⚡ Quick Wins</div>
+  <div class="quick-wins-grid">
+    {% for w in r.quick_wins %}
+    <div class="win-card">
+      <div class="win-action">{{ w.action }}</div>
+      <div class="win-impact">{{ w.impact }}</div>
+      <span class="effort-badge">Esforço: {{ w.effort }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- 30-Day Plan -->
+  {% if r.action_plan %}
+  <div class="section-head">📅 Plano de 30 Dias</div>
+  <div class="plan-grid">
+    {% for week_key, label in [('week_1','Semana 1'),('week_2','Semana 2'),('week_3','Semana 3'),('week_4','Semana 4')] %}
+    {% if r.action_plan[week_key] %}
+    <div class="week-card">
+      <div class="week-label">{{ label }}</div>
+      <ul class="week-actions">
+        {% for item in r.action_plan[week_key] %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div style="text-align: center; margin-top: 2rem;">
+    <a href="/" class="btn btn-ghost">← Nova Auditoria</a>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const auditId = "{{ audit_id }}";
+  const status  = "{{ audit.status }}";
+
+  if (status === "running") {
+    const poll = setInterval(async () => {
+      const resp = await fetch(`/api/status/${auditId}`);
+      const data = await resp.json();
+
+      if (data.status === "done") {
+        clearInterval(poll);
+        location.reload();
+      } else if (data.status === "error") {
+        clearInterval(poll);
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('error-view').style.display = 'block';
+        document.getElementById('error-msg').textContent = data.error || 'Erro desconhecido';
+      }
+    }, 2500);
+  }
+
+  // Animate bars on load
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.bar-fill').forEach(el => {
+      const w = el.dataset.width;
+      setTimeout(() => { el.style.width = w + '%'; }, 200);
+    });
+  });
+</script>
+{% endblock %}

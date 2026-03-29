@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Histórico — GEO-SEO Auditor{% endblock %}
+{% block content %}
+<h1 style="font-family: var(--font-head); font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Histórico</h1>
+<p class="text-muted text-sm" style="margin-bottom: 2rem;">Auditorias desta sessão (resetam ao reiniciar o servidor)</p>
+
+{% if audits %}
+<div style="display: flex; flex-direction: column; gap: 0.6rem;">
+  {% for a in audits %}
+  <a href="/results/{{ a.id }}" style="text-decoration: none;">
+    <div style="
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      transition: border-color 0.2s;
+    " onmouseover="this.style.borderColor='rgba(0,229,160,0.25)'"
+       onmouseout="this.style.borderColor='var(--border)'">
+      <div>
+        <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--mint);">{{ a.url }}</div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.2rem; font-family: var(--font-mono);">
+          {{ a.started_at or '' }} · {{ a.provider or 'gemini' }}
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        {% if a.status == 'done' and a.result %}
+          {% set sc = a.result.scores.overall %}
+          {% if sc >= 75 %}
+          <span class="score-pill score-good">{{ sc }}</span>
+          {% elif sc >= 60 %}
+          <span class="score-pill score-fair">{{ sc }}</span>
+          {% elif sc >= 40 %}
+          <span class="score-pill score-poor">{{ sc }}</span>
+          {% else %}
+          <span class="score-pill score-critical">{{ sc }}</span>
+          {% endif %}
+        {% elif a.status == 'running' %}
+          <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">⏳ em progresso</span>
+        {% elif a.status == 'error' %}
+          <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--red);">✗ erro</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
+  <div style="font-size: 2.5rem; margin-bottom: 1rem;">📭</div>
+  <p>Nenhuma auditoria ainda nesta sessão.</p>
+  <a href="/" class="btn btn-primary" style="margin-top: 1.5rem;">Fazer primeira auditoria</a>
+</div>
+{% endif %}
+{% endblock %}
