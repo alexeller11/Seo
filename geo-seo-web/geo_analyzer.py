@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 GEO-SEO Analyzer — Gemini / Perplexity backend
+Enhanced with GEO/AIO directives and prescriptive analysis
 """
 
 import json
@@ -66,6 +67,30 @@ def fetch_page_data(url: str) -> dict:
         imgs = soup.find_all("img")
         imgs_no_alt = sum(1 for i in imgs if not i.get("alt", "").strip())
 
+        # ── GEO Analysis: Extract key elements ────────────────────────
+        # Citação de Autoridade (definições concisas)
+        text_content = soup.get_text()
+        has_definitions = bool(re.search(r'\b\w+\s+é\s+', text_content[:5000]))
+        
+        # Densidade de Entidades
+        has_nap = bool(re.search(r'(telefone|phone|endereço|address)', text_content, re.I))
+        
+        # Fact-checking e Tabelas
+        tables = soup.find_all("table")
+        has_tables = len(tables) > 0
+        
+        # FAQ Section
+        has_faq = bool(
+            soup.find(lambda t: t.name in ("section", "div", "article")
+                      and "faq" in (t.get("class", []) or [t.get("id", "")]).__str__().lower())
+        )
+        
+        # Author markup
+        has_author = bool(
+            soup.find(attrs={"rel": "author"})
+            or soup.find(string=re.compile(r"written by|by\s+\w+|autor", re.I))
+        )
+
         data["homepage"] = {
             "title": title.get_text(strip=True) if title else "",
             "meta_description": meta_desc.get("content", "") if meta_desc else "",
@@ -80,16 +105,15 @@ def fetch_page_data(url: str) -> dict:
             "total_links": len(links),
             "images": len(imgs),
             "images_without_alt": imgs_no_alt,
-            "has_faq_section": bool(
-                soup.find(lambda t: t.name in ("section", "div", "article")
-                          and "faq" in (t.get("class", []) or [t.get("id", "")]).__str__().lower())
-            ),
-            "has_author": bool(
-                soup.find(attrs={"rel": "author"})
-                or soup.find(string=re.compile(r"written by|by\s+\w+", re.I))
-            ),
+            "has_faq_section": has_faq,
+            "has_author": has_author,
             "canonical": (soup.find("link", {"rel": "canonical"}) or {}).get("href", ""),
             "html_sample": resp.text[:4000],
+            # GEO-specific signals
+            "has_definitions": has_definitions,
+            "has_nap_signals": has_nap,
+            "has_tables": has_tables,
+            "table_count": len(tables),
         }
     except Exception as e:
         data["fetch_error"] = str(e)
@@ -123,30 +147,37 @@ def fetch_page_data(url: str) -> dict:
 
 # ── Prompt Builder ──────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are a world-class GEO (Generative Engine Optimization) consultant.
-GEO optimizes websites to be discovered, cited, and recommended by AI systems
-(ChatGPT, Perplexity, Gemini, Google AI Overviews, Bing Copilot).
+SYSTEM_PROMPT = """Você é o Diretor de Estratégia Digital (CMO/CTO) de uma agência de SEO de elite.
+Sua análise não é apenas informativa; ela é PRESCRITIVA.
+Você não sugere, você DETERMINA as ações necessárias para que um site domine os motores de busca tradicionais e as novas buscas de IA (ChatGPT, Gemini, Perplexity, AI Overviews).
 
-You analyze websites and return ONLY valid JSON — no markdown, no preamble."""
+Seu tom é direto, executivo e orientado para resultados de negócio.
+Use verbos imperativos: "Implemente", "Substitua", "Remova", "Otimize para...".
+Evite: "Pode ser interessante", "Talvez", "Considere".
 
-AUDIT_PROMPT = """Analyze this website and return a GEO+SEO audit as a valid JSON object.
+Retorne APENAS JSON válido — sem markdown, sem preâmbulo."""
+
+AUDIT_PROMPT = """Você é o Diretor de Estratégia Digital analisando um site para GEO (Generative Engine Optimization) e SEO.
 
 URL: {url}
 
-PAGE DATA:
-- Title: {title}
+DADOS DA PÁGINA:
+- Título: {title}
 - Meta Description: {meta_desc}
 - H1: {h1}
 - H2s: {h2s}
-- Word Count: {word_count}
-- Schema Types Found: {schema_types}
-- Has Open Graph: {has_og}
-- Has Twitter Card: {has_twitter}
-- Internal Links: {internal_links}
-- Images Without Alt: {images_no_alt}
-- Has FAQ Section: {has_faq}
-- Has Author Markup: {has_author}
-- Has Sitemap: {has_sitemap}
+- Contagem de Palavras: {word_count}
+- Tipos de Schema Encontrados: {schema_types}
+- Open Graph: {has_og}
+- Twitter Card: {has_twitter}
+- Links Internos: {internal_links}
+- Imagens sem Alt: {images_no_alt}
+- Seção FAQ: {has_faq}
+- Markup de Autor: {has_author}
+- Sitemap: {has_sitemap}
+- Tem Definições Concisas: {has_definitions}
+- Sinais de NAP (Nome, Endereço, Telefone): {has_nap}
+- Tabelas Estruturadas: {has_tables} ({table_count} encontradas)
 
 ROBOTS.TXT:
 {robots_txt}
@@ -154,14 +185,14 @@ ROBOTS.TXT:
 LLMS.TXT:
 {llms_txt}
 
-HTML SAMPLE (first 4000 chars):
+AMOSTRA HTML (primeiros 4000 caracteres):
 {html_sample}
 
-Return ONLY this JSON structure — no markdown fences, no extra text:
+Retorne APENAS esta estrutura JSON — sem markdown, sem texto extra:
 {{
-  "site_name": "Name extracted from page",
-  "business_type": "SaaS|Local Business|E-commerce|Publisher|Agency|Other",
-  "summary": "2-3 sentence executive summary of the site's GEO health",
+  "site_name": "Nome extraído da página",
+  "business_type": "SaaS|Negócio Local|E-commerce|Publisher|Agência|Outro",
+  "expert_verdict": "Parágrafo direto (3-4 frases) sobre o estado atual do site e seu potencial de crescimento em buscas de IA. Seja prescritivo e executivo.",
   "scores": {{
     "overall": 0,
     "citability": 0,
@@ -172,43 +203,84 @@ Return ONLY this JSON structure — no markdown fences, no extra text:
     "platform": 0
   }},
   "rating": "Excellent|Good|Fair|Poor|Critical",
+  "priority_matrix": [
+    {{
+      "priority": "Crítica",
+      "action": "Ação Técnica/Conteúdo específica",
+      "impact": 9.5,
+      "effort": "Baixo",
+      "objective": "Ex: Ser citado no Perplexity"
+    }},
+    {{
+      "priority": "Alta",
+      "action": "Ação Técnica/Conteúdo específica",
+      "impact": 8.0,
+      "effort": "Médio",
+      "objective": "Ex: Dominar AI Overview"
+    }}
+  ],
   "issues": {{
     "critical": [
-      {{"issue": "Title", "detail": "Specific detail", "fix": "How to fix"}}
+      {{"issue": "Título", "detail": "Detalhe específico", "fix": "Como corrigir"}}
     ],
     "high": [],
     "medium": [],
     "low": []
   }},
   "quick_wins": [
-    {{"action": "Action title", "impact": "Expected impact description", "effort": "Low|Medium"}}
+    {{
+      "action": "Ação 1 (< 15 min)",
+      "impact": "Descrição do impacto esperado",
+      "effort": "Baixo"
+    }},
+    {{
+      "action": "Ação 2 (< 15 min)",
+      "impact": "Descrição do impacto esperado",
+      "effort": "Baixo"
+    }},
+    {{
+      "action": "Ação 3 (< 15 min)",
+      "impact": "Descrição do impacto esperado",
+      "effort": "Baixo"
+    }}
   ],
   "category_insights": {{
-    "citability": "Insight about AI citability and extractability",
-    "brand_authority": "Insight about brand presence across AI training data sources",
-    "content_eeat": "Insight about Experience/Expertise/Authoritativeness/Trustworthiness",
-    "technical": "Insight about AI crawler access, llms.txt, rendering, speed",
-    "schema": "Insight about structured data and JSON-LD",
-    "platform": "Insight about optimization for Google AIO, Perplexity, ChatGPT"
+    "citability": "Análise sobre citabilidade de IA e extratibilidade",
+    "brand_authority": "Análise sobre presença de marca em dados de treinamento de IA",
+    "content_eeat": "Análise sobre Experience/Expertise/Authoritativeness/Trustworthiness",
+    "technical": "Análise sobre acesso de crawlers de IA, llms.txt, renderização, velocidade",
+    "schema": "Análise sobre dados estruturados e JSON-LD",
+    "platform": "Análise sobre otimização para Google AIO, Perplexity, ChatGPT"
   }},
+  "geo_implementation_guide": {{
+    "json_ld_schema": "Código JSON-LD específico necessário (ex: FAQPage, HowTo, Organization). Forneça o código completo pronto para implementar.",
+    "llms_txt_content": "Conteúdo completo para o arquivo /llms.txt que resume as principais informações para crawlers de IA",
+    "answer_engine_content": "Reescreva um parágrafo crítico da página no formato 'Answer Engine' (Pergunta direta seguida de resposta factual de máx 30 palavras)"
+  }},
+  "maturity_gap": "Análise de gap de maturidade em relação aos líderes do mercado (padrão NP Digital). Identifique se o site possui estratégia de '7 semanas' ou visão de 'SEO Preditivo'.",
   "action_plan": {{
-    "week_1": ["Specific action 1", "Specific action 2", "Specific action 3"],
-    "week_2": ["Specific action 1", "Specific action 2"],
-    "week_3": ["Specific action 1", "Specific action 2"],
-    "week_4": ["Specific action 1", "Specific action 2"]
+    "week_1": ["Ação específica 1", "Ação específica 2", "Ação específica 3"],
+    "week_2": ["Ação específica 1", "Ação específica 2"],
+    "week_3": ["Ação específica 1", "Ação específica 2"],
+    "week_4": ["Ação específica 1", "Ação específica 2"]
   }}
 }}
 
-SCORING RULES (0-100 each):
-- citability (25% weight): FAQ blocks? Clear answer passages? Statistics? Definitions? Direct answers to questions?
-- brand_authority (20% weight): Reddit/YouTube/Wikipedia presence signals? Strong entity? Brand mentions?
-- content_eeat (20% weight): Author bios? Credentials? Citations? Content freshness? Depth?
-- technical (15% weight): AI crawlers NOT blocked in robots.txt? llms.txt present? Has sitemap? Canonical set?
-- schema (10% weight): JSON-LD present? What types? Organization/Article/FAQ/Product schemas?
-- platform (10% weight): Optimized for Google AIO? Long-tail questions answered? Citable passages?
+REGRAS DE SCORING (0-100 cada):
+- citability (25%): Blocos FAQ? Passagens de resposta clara? Estatísticas? Definições? Respostas diretas a perguntas?
+- brand_authority (20%): Sinais de presença em Reddit/YouTube/Wikipedia? Entidade forte? Menções de marca?
+- content_eeat (20%): Bios de autores? Credenciais? Citações? Atualização de conteúdo? Profundidade?
+- technical (15%): Crawlers de IA NÃO bloqueados em robots.txt? llms.txt presente? Sitemap? Canonical definido?
+- schema (10%): JSON-LD presente? Quais tipos? Schemas Organization/Article/FAQ/Product?
+- platform (10%): Otimizado para Google AIO? Perguntas de cauda longa respondidas? Passagens citáveis?
 - overall = (citability*0.25) + (brand_authority*0.20) + (content_eeat*0.20) + (technical*0.15) + (schema*0.10) + (platform*0.10)
 
-RATING: 90-100=Excellent, 75-89=Good, 60-74=Fair, 40-59=Poor, 0-39=Critical"""
+RATING: 90-100=Excellent, 75-89=Good, 60-74=Fair, 40-59=Poor, 0-39=Critical
+
+TOM DE VOZ PRESCRITIVO:
+- Use: "Implemente", "Substitua", "Remova", "Otimize para..."
+- Evite: "Pode ser interessante", "Talvez", "Considere"
+- Seja direto e executivo em todas as recomendações"""
 
 
 def _build_prompt(page_data: dict) -> str:
@@ -218,9 +290,9 @@ def _build_prompt(page_data: dict) -> str:
         title=hp.get("title", "N/A"),
         meta_desc=hp.get("meta_description", "N/A"),
         h1=hp.get("h1", "N/A"),
-        h2s=", ".join(hp.get("h2s", [])) or "None",
+        h2s=", ".join(hp.get("h2s", [])) or "Nenhuma",
         word_count=hp.get("word_count", 0),
-        schema_types=", ".join(hp.get("schema_types", [])) or "None",
+        schema_types=", ".join(hp.get("schema_types", [])) or "Nenhum",
         has_og=hp.get("has_og", False),
         has_twitter=hp.get("has_twitter_card", False),
         internal_links=hp.get("internal_links", 0),
@@ -228,8 +300,12 @@ def _build_prompt(page_data: dict) -> str:
         has_faq=hp.get("has_faq_section", False),
         has_author=hp.get("has_author", False),
         has_sitemap=page_data.get("has_sitemap", False),
-        robots_txt=page_data.get("robots_txt", "Not found"),
-        llms_txt=page_data.get("llms_txt", "Not found"),
+        has_definitions=hp.get("has_definitions", False),
+        has_nap=hp.get("has_nap_signals", False),
+        has_tables=hp.get("has_tables", False),
+        table_count=hp.get("table_count", 0),
+        robots_txt=page_data.get("robots_txt", "Não encontrado"),
+        llms_txt=page_data.get("llms_txt", "Não encontrado"),
         html_sample=hp.get("html_sample", "N/A")[:4000],
     )
 
@@ -243,7 +319,7 @@ def _clean_json(text: str) -> dict:
     return json.loads(text)
 
 
-# ── Providers ───────────────────────────────────────────────────────────
+# ── Providers ───────────────────────────────────────────────────────
 
 def _run_gemini(prompt: str, api_key: str) -> dict:
     import google.generativeai as genai
@@ -275,7 +351,7 @@ def _run_perplexity(prompt: str, api_key: str) -> dict:
         json={
             "model": "llama-3.1-sonar-small-128k-online",
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT + "\nReturn ONLY valid JSON."},
+                {"role": "system", "content": SYSTEM_PROMPT + "\nRetorne APENAS JSON válido."},
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
@@ -294,7 +370,7 @@ def run_audit(url: str, api_key: str, provider: str = "gemini") -> dict:
     """
     Run a full GEO+SEO audit on *url* using the specified AI provider.
 
-    Returns a dict with keys: site_name, scores, issues, quick_wins, etc.
+    Returns a dict with keys: site_name, scores, issues, quick_wins, geo_implementation_guide, etc.
     Raises on error.
     """
     if not url.startswith(("http://", "https://")):
@@ -308,7 +384,7 @@ def run_audit(url: str, api_key: str, provider: str = "gemini") -> dict:
     elif provider == "perplexity":
         result = _run_perplexity(prompt, api_key)
     else:
-        raise ValueError(f"Unknown provider: {provider!r}")
+        raise ValueError(f"Provider desconhecido: {provider!r}")
 
     # Ensure overall score is calculated correctly
     s = result.get("scores", {})
@@ -326,8 +402,8 @@ def run_audit(url: str, api_key: str, provider: str = "gemini") -> dict:
     result["_meta"] = {
         "url": url,
         "provider": provider,
-        "llms_txt_found": page_data.get("llms_txt", "Not found") != "Not found",
-        "robots_txt": page_data.get("robots_txt", "Not found")[:300],
+        "llms_txt_found": page_data.get("llms_txt", "Não encontrado") != "Não encontrado",
+        "robots_txt": page_data.get("robots_txt", "Não encontrado")[:300],
         "has_sitemap": page_data.get("has_sitemap", False),
     }
 

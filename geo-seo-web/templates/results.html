@@ -132,6 +132,101 @@
     margin-top: 0.4rem;
   }
 
+  /* ── Expert Verdict ── */
+  .expert-verdict {
+    background: linear-gradient(135deg, rgba(0,229,160,0.1) 0%, rgba(96,200,255,0.05) 100%);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--mint);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.8;
+  }
+
+  .expert-verdict-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--mint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+
+  /* ── Priority Matrix Table ── */
+  .priority-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .priority-matrix thead {
+    background: rgba(0,229,160,0.08);
+    border-bottom: 2px solid var(--border);
+  }
+
+  .priority-matrix th {
+    padding: 0.9rem 1rem;
+    text-align: left;
+    font-family: var(--font-head);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .priority-matrix td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .priority-matrix tr:last-child td {
+    border-bottom: none;
+  }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .priority-critica {
+    background: rgba(255,77,109,0.15);
+    color: #ff4d6d;
+    border: 1px solid rgba(255,77,109,0.3);
+  }
+
+  .priority-alta {
+    background: rgba(255,209,102,0.15);
+    color: #ffd166;
+    border: 1px solid rgba(255,209,102,0.3);
+  }
+
+  .priority-media {
+    background: rgba(96,200,255,0.15);
+    color: #60c8ff;
+    border: 1px solid rgba(96,200,255,0.3);
+  }
+
+  .impact-score {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--mint);
+  }
+
   /* ── Summary card ── */
   .summary-card {
     background: var(--surface);
@@ -289,6 +384,69 @@
     border: 1px solid var(--border-accent);
   }
 
+  /* ── GEO Implementation Guide ── */
+  .geo-guide-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .geo-guide-title {
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .geo-code-block {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--mint);
+    overflow-x: auto;
+    line-height: 1.4;
+    margin-bottom: 1rem;
+  }
+
+  .geo-code-block code {
+    color: var(--mint);
+  }
+
+  /* ── Maturity Gap ── */
+  .maturity-gap-card {
+    background: linear-gradient(135deg, rgba(255,209,102,0.1) 0%, rgba(255,77,109,0.05) 100%);
+    border: 1px solid rgba(255,209,102,0.3);
+    border-left: 4px solid #ffd166;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .maturity-gap-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: #ffd166;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+
+  .maturity-gap-content {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
   /* ── Action Plan ── */
   .plan-grid {
     display: grid;
@@ -344,6 +502,27 @@
   .dot-green { background: var(--mint); }
   .dot-red { background: var(--red); }
   .dot-yellow { background: var(--yellow); }
+
+  /* ── Copy button ── */
+  .copy-btn {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    margin-left: 0.5rem;
+    background: rgba(0,229,160,0.15);
+    border: 1px solid rgba(0,229,160,0.3);
+    color: var(--mint);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: rgba(0,229,160,0.25);
+    border-color: var(--mint);
+  }
 </style>
 {% endblock %}
 
@@ -396,6 +575,7 @@
       </div>
     </div>
 
+    <!-- Score Ring -->
     <div class="score-ring-wrap">
       {% set sc = s.overall %}
       {% set color = '#00e5a0' if sc >= 75 else ('#ffd166' if sc >= 60 else ('#ff783c' if sc >= 40 else '#ff4d6d')) %}
@@ -440,6 +620,45 @@
       Provider: {{ audit.provider | title }}
     </div>
   </div>
+
+  <!-- Expert Verdict -->
+  {% if r.expert_verdict %}
+  <div class="expert-verdict">
+    <div class="expert-verdict-label">🎯 Veredito do Especialista</div>
+    <p>{{ r.expert_verdict }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Priority Matrix -->
+  {% if r.priority_matrix %}
+  <div class="section-head">📊 Matriz de Prioridade</div>
+  <table class="priority-matrix">
+    <thead>
+      <tr>
+        <th>Prioridade</th>
+        <th>Ação Recomendada</th>
+        <th>Impacto</th>
+        <th>Esforço</th>
+        <th>Objetivo Técnico</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in r.priority_matrix %}
+      <tr>
+        <td>
+          <span class="priority-badge priority-{{ item.priority | lower | replace('á', 'a') | replace('í', 'i') }}">
+            {{ item.priority }}
+          </span>
+        </td>
+        <td>{{ item.action }}</td>
+        <td><span class="impact-score">{{ item.impact }}/10</span></td>
+        <td>{{ item.effort }}</td>
+        <td>{{ item.objective }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 
   <!-- Summary -->
   <div class="summary-card">{{ r.summary }}</div>
@@ -504,7 +723,7 @@
 
   <!-- Quick Wins -->
   {% if r.quick_wins %}
-  <div class="section-head">⚡ Quick Wins</div>
+  <div class="section-head">⚡ Quick Wins (< 15 min)</div>
   <div class="quick-wins-grid">
     {% for w in r.quick_wins %}
     <div class="win-card">
@@ -513,6 +732,56 @@
       <span class="effort-badge">Esforço: {{ w.effort }}</span>
     </div>
     {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- GEO Implementation Guide -->
+  {% if r.geo_implementation_guide %}
+  <div class="section-head">🔧 Guia de Implementação GEO/AIO</div>
+  
+  {% if r.geo_implementation_guide.json_ld_schema %}
+  <div class="geo-guide-section">
+    <div class="geo-guide-title">
+      📋 Código JSON-LD Recomendado
+      <button class="copy-btn" onclick="copyToClipboard(this, 'json-ld-code')">Copiar</button>
+    </div>
+    <div class="geo-code-block" id="json-ld-code">
+      <code>{{ r.geo_implementation_guide.json_ld_schema }}</code>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if r.geo_implementation_guide.llms_txt_content %}
+  <div class="geo-guide-section">
+    <div class="geo-guide-title">
+      📄 Conteúdo para /llms.txt
+      <button class="copy-btn" onclick="copyToClipboard(this, 'llms-txt-code')">Copiar</button>
+    </div>
+    <div class="geo-code-block" id="llms-txt-code">
+      <code>{{ r.geo_implementation_guide.llms_txt_content }}</code>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if r.geo_implementation_guide.answer_engine_content %}
+  <div class="geo-guide-section">
+    <div class="geo-guide-title">
+      💬 Conteúdo no Formato "Answer Engine"
+    </div>
+    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 0.8rem;">
+      {{ r.geo_implementation_guide.answer_engine_content }}
+    </p>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <!-- Maturity Gap -->
+  {% if r.maturity_gap %}
+  <div class="maturity-gap-card">
+    <div class="maturity-gap-label">📈 Gap de Maturidade (Benchmark NP Digital)</div>
+    <div class="maturity-gap-content">
+      {{ r.maturity_gap }}
+    </div>
   </div>
   {% endif %}
 
@@ -573,5 +842,21 @@
       setTimeout(() => { el.style.width = w + '%'; }, 200);
     });
   });
+
+  // Copy to clipboard function
+  function copyToClipboard(btn, elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Erro ao copiar:', err);
+    });
+  }
 </script>
 {% endblock %}
