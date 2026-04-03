@@ -4,12 +4,15 @@ GEO-SEO Web App — Flask + Gemini/Perplexity
 Deploy on Railway with one click.
 """
 
+import ipaddress
 import json
 import os
+import socket
 import threading
 import uuid
 from collections import deque
 from datetime import datetime
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
@@ -28,6 +31,28 @@ DEFAULT_PERPLEXITY_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
+
+def _is_safe_url(url: str) -> bool:
+    """Valida URL para prevenir SSRF — bloqueia IPs privados/locais."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+            return False
+        try:
+            ip = ipaddress.ip_address(socket.gethostbyname(hostname))
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+        except (socket.gaierror, ValueError):
+            pass
+        return True
+    except Exception:
+        return False
+
 
 def _store_audit(audit_id: str, data: dict):
     _audits[audit_id] = data
@@ -77,6 +102,16 @@ def start_audit():
 
     if not url:
         return redirect(url_for("index"))
+
+    # Validar URL para prevenir SSRF
+    if not _is_safe_url(url):
+        return render_template(
+            "index.html",
+            error="URL inválida ou não permitida. Use uma URL pública com http:// ou https://.",
+            recent=[],
+            has_gemini_key=bool(DEFAULT_GEMINI_KEY),
+            has_perplexity_key=bool(DEFAULT_PERPLEXITY_KEY),
+        )
 
     if not api_key:
         return render_template(
