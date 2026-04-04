@@ -12,6 +12,7 @@ import threading
 import uuid
 from collections import deque
 from datetime import datetime
+from flask_cors import CORS
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
@@ -20,6 +21,7 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
 
 # In-memory audit store (max 50 recent audits)
